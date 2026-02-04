@@ -16,8 +16,11 @@ operators you will test is: up, left, right, then down. At what depth the soluti
 reached?  */
 
 #include <iostream>
+#include <algorithm>
 #include <vector>
 #include <string>
+#include <stack>
+#include <array>
 
 // CHaracters to represent grid squares
 bool entering_forbidden_squares = true;
@@ -27,13 +30,31 @@ const std::string GOAL_SQUARE = "G";
 const std::string FORBIDDEN_SQUARE = "X";
 
 class Agent;
+
+// Helper functions
+
+/**
+ * @param g grid (vertical vector of horizontal strings)
+ */
 void print_grid(std::vector<std::string> g);
+
+/**
+ * @param x x coordinate
+ * @param y y coordinate
+ * @param g grid (vertical vector of horizontal strings)
+ * @return true if square is valid to move to, otherwise false
+*/
 bool valid_square(int x, int y, std::vector<std::string> g);
+
+bool check_coordinate_history(int x, int y, std::vector<std::array<int, 2>> history);
+
+bool dfs(std::vector<std::string> grid, std::stack<std::array<int, 2>> fringe, std::vector<std::array<int, 2>> path);
 
 int main() {
     int x, y;
     std::vector<std::string> grid = {};
-    bool goal = false;
+    std::stack<std::array<int, 2>> starting_stack; // Stack used for DFS fringe
+    std::vector<std::array<int, 2>> history; // Vector used to store current path
     
     // prompt the user to enter the width and the height of the grid, the start and the goal states, and the forbidden squares.
     
@@ -60,6 +81,7 @@ int main() {
         // Check for valid starting square coordinates, then place starting square
         if (valid_square(x, y, grid)) {
             grid[y].replace(x, 1, STARTING_SQUARE);
+            starting_stack.push({x, y});
         } else {std::cout << "INVALID STARTING SQUARE\n";}
     }
     print_grid(grid);
@@ -82,7 +104,7 @@ int main() {
         std::cin >> x >> y;
         if (x !=-1 && y!=-1) {
             if (valid_square(x, y, grid)) {
-                grid[y].replace(x, 1, "X");
+                grid[y].replace(x, 1, FORBIDDEN_SQUARE);
                 print_grid(grid);
             } else {
                 std::cout << "INVALID SQUARE" << std::endl;
@@ -92,27 +114,18 @@ int main() {
 
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
-    while(!goal) {
-        
-    }
+
+    dfs(grid, starting_stack, history);
 
     return 0;
 }
 
-/**
- * @return true if square is valid to move to, otherwise false
- * @param g grid (vertical vector of horizontal strings)
- */
+
 bool valid_square(int x, int y, std::vector<std::string> g) {
     return (x > 0 && y > 0 && y < g.size() && x < g.at(0).length() && g[y].substr(x, 1) != FORBIDDEN_SQUARE);
 }
 
-/**
- * @function 
- * @param x x coordinate
- * @param y y coordinate
- * @param g grid (vertical vector of horizontal strings)
-*/
+
 void print_grid(std::vector<std::string> g) {
     std::cout << std::endl;
     for (std::string s : g) {std::cout << s << std::endl;}
@@ -170,7 +183,86 @@ class Agent {
             return true;
         } else {return false;}
     }
-    bool checkGoalState(int currentx, int currenty, std::vector<std::string> g) {
-        return(x > 0 && y > 0 && y < g.size() && x < g.at(0).length() && g[y].substr(x, 1) == GOAL_SQUARE);
-    }
+    /**
+     * @brief checks if agent has reached goal square
+     * @return returns true if agent has reached goal square, otherwise returns false
+     */
+    // bool checkGoalState() {
+    //     std::string s = *grid;
+    //     return(s[y].substr(x, 1) == GOAL_SQUARE);
+    // }
 };
+
+/*
+GENERAL TREE SEARCH
+
+    function TREE_SEARCH(problem, strategy) returns a solution, or failure
+    initialize the search tree using the initial state of problem
+    loop do
+        if there are no candidates for expansion then return failure
+        if the node contains a goal state then return the corresponding solution
+        else expand the node and add the resulting nodes to the search tree
+    end
+
+    
+*/
+
+// (a) A depth-first search from S to G, given that the order of the operators you will test
+// is: up, left, right, then down.  
+
+
+
+
+bool dfs(std::vector<std::string> grid, std::stack<std::array<int, 2>> fringe, std::vector<std::array<int, 2>> path) {
+    bool discovered_children = false;
+
+    // Access and pop current coordinates
+    std::array<int, 2> coordinates = fringe.top();
+    int x = coordinates[0]; int y = coordinates[1];
+    fringe.pop();
+    path.push_back(coordinates);
+
+    // If goal state, print solution path and return true
+    if (grid[y].substr(x, 1) == GOAL_SQUARE) {
+        for (std::array<int, 2> xy: path) {
+            std::cout << xy[0] << " " << xy[1] << std::endl;
+        }
+        return true;
+    }
+
+    // Check up, left, down, right, to see if they are valid and haven't been visited, then push to stack
+
+
+    if (valid_square(x, y+1, grid) && !check_coordinate_history(x, y+1, path)) { // Up
+        fringe.push({x, y+1});
+        discovered_children = true;
+    }
+    if (valid_square(x-1, y, grid) && !check_coordinate_history(x-1, y, path)) { // Left
+        fringe.push({x-1, y});
+        discovered_children = true;
+    }
+    if (valid_square(x+1, y, grid) && !check_coordinate_history(x+1, y, path)) { // Right
+        fringe.push({x+1, y});
+        discovered_children = true;
+    }
+    if (valid_square(x, y-1, grid) && !check_coordinate_history(x, y-1, path)) { // Down
+        fringe.push({x, y-1});
+        discovered_children = true;
+    }
+    
+    // If we didn't add any children, go up a node (pop back of path history)
+    if (!discovered_children) {path.pop_back();}
+
+    // If fringe is empty after adding all valid children, return false
+    if(fringe.empty()) {return false;}
+
+    // Iterate on next value of the stack
+    return dfs(grid, fringe, path);
+}
+
+bool check_coordinate_history(int x, int y, std::vector<std::array<int, 2>> history) {
+    std::array<int, 2> coordinates = {x, y};
+    auto it = std::find(history.begin(), history.end(), coordinates);
+    if (it == history.end()) {return false;}
+    else {return true;}
+}
