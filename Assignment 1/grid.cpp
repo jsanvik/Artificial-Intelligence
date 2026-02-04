@@ -24,9 +24,9 @@ bool entering_forbidden_squares = true;
 const std::string EMPTY_SQUARE = "-";
 const std::string STARTING_SQUARE = "S";
 const std::string GOAL_SQUARE = "G";
-const std::string FORBIDDEN_SQURE = "X";
+const std::string FORBIDDEN_SQUARE = "X";
 
-
+class Agent;
 void print_grid(std::vector<std::string> g);
 bool valid_square(int x, int y, std::vector<std::string> g);
 
@@ -104,7 +104,7 @@ int main() {
  * @param g grid (vertical vector of horizontal strings)
  */
 bool valid_square(int x, int y, std::vector<std::string> g) {
-    return (x > 0 && y > 0 && y < g.size() && x < g.at(0).length() && g[y].substr(x, 1) != "X");
+    return (x > 0 && y > 0 && y < g.size() && x < g.at(0).length() && g[y].substr(x, 1) != FORBIDDEN_SQUARE);
 }
 
 /**
@@ -117,3 +117,60 @@ void print_grid(std::vector<std::string> g) {
     std::cout << std::endl;
     for (std::string s : g) {std::cout << s << std::endl;}
 }
+
+class Agent {
+    private: 
+    int x, y;
+    std::vector<std::string>* grid;
+    public:
+    /**
+     * @brief default constructor
+     */
+    Agent(int startx, int starty, std::vector<std::string> g) {
+        x = startx; y = starty;
+        grid = &g;
+    }
+    /**
+     * @brief move agent up
+     * @return if valid move, moves agent and returns true, else returns false
+     */
+    bool up() {
+        if (valid_square(x, y+1, *grid)) {
+            y+=1;
+            return true;
+        } else {return false;}
+    }
+    /**
+     * @brief move agent left
+     * @return if valid move, moves agent and returns true, else returns false
+     */
+    bool left() {
+        if (valid_square(x-1, y, *grid)) {
+            x-=1;
+            return true;
+        } else {return false;}
+    }
+    /**
+     * @brief move agent right
+     * @return if valid move, moves agent and returns true, else returns false
+     */
+    bool right() {
+        if (valid_square(x+1, y, *grid)) {
+            x+=1;
+            return true;
+        } else {return false;}
+    }
+    /**
+     * @brief move agent down
+     * @return if valid move, moves agent and returns true, else returns false
+     */
+    bool down() {
+        if (valid_square(x, y-1, *grid)) {
+            y-=1;
+            return true;
+        } else {return false;}
+    }
+    bool checkGoalState(int currentx, int currenty, std::vector<std::string> g) {
+        return(x > 0 && y > 0 && y < g.size() && x < g.at(0).length() && g[y].substr(x, 1) == GOAL_SQUARE);
+    }
+};
