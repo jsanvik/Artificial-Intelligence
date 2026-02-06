@@ -20,6 +20,7 @@ reached?  */
 #include <vector>
 #include <string>
 #include <stack>
+#include <queue>
 #include <array>
 
 // CHaracters to represent grid squares
@@ -48,12 +49,17 @@ bool valid_square(int x, int y, std::vector<std::string> g);
 
 bool check_coordinate_history(int x, int y, std::vector<std::array<int, 2>> history);
 
+// Search strategies
 bool dfs(std::vector<std::string> grid, std::stack<std::array<int, 2>> fringe, std::vector<std::array<int, 2>> path);
+bool bfs(std::vector<std::string> grid, std::queue<std::array<int, 2>> fringe, std::vector<std::array<int, 2>> path);
+bool idfs(std::vector<std::string> grid, std::queue<std::array<int, 2>> fringe, std::vector<std::array<int, 2>> path);
+
 
 int main() {
     int x, y;
     std::vector<std::string> grid = {};
     std::stack<std::array<int, 2>> starting_stack; // Stack used for DFS fringe
+    std::queue<std::array<int, 2>> starting_queue; // Stack used for DFS fringe
     std::vector<std::array<int, 2>> history; // Vector used to store current path
     
     // prompt the user to enter the width and the height of the grid, the start and the goal states, and the forbidden squares.
@@ -82,6 +88,7 @@ int main() {
         if (valid_square(x, y, grid)) {
             grid[y].replace(x, 1, STARTING_SQUARE);
             starting_stack.push({x, y});
+            starting_queue.push({x, y});
         } else {std::cout << "INVALID STARTING SQUARE\n";}
     }
     print_grid(grid);
@@ -115,7 +122,9 @@ int main() {
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
 
-    dfs(grid, starting_stack, history);
+    // dfs(grid, starting_stack, history);
+    bfs(grid, starting_queue, history);
+
 
     return 0;
 }
@@ -258,6 +267,54 @@ bool dfs(std::vector<std::string> grid, std::stack<std::array<int, 2>> fringe, s
 
     // Iterate on next value of the stack
     return dfs(grid, fringe, path);
+}
+
+// TODO: FIX PATH PRINTING
+bool bfs(std::vector<std::string> grid, std::queue<std::array<int, 2>> fringe, std::vector<std::array<int, 2>> path) {
+    bool discovered_children = false; // Did we find children for this node?
+
+    // Access and pop current coordinates
+    std::array<int, 2> coordinates = fringe.front();
+    int x = coordinates[0]; int y = coordinates[1];
+    fringe.pop();
+    path.push_back(coordinates);
+
+    // If goal state, print solution path and return true
+    if (grid[y].substr(x, 1) == GOAL_SQUARE) {
+        for (std::array<int, 2> xy: path) {
+            std::cout << xy[0] << " " << xy[1] << std::endl;
+        }
+        return true;
+    }
+
+    // Check up, left, down, right, to see if they are valid and haven't been visited, then push to queue
+
+
+    if (valid_square(x, y+1, grid) && !check_coordinate_history(x, y+1, path)) { // Up
+        fringe.push({x, y+1});
+        discovered_children = true;
+    }
+    if (valid_square(x-1, y, grid) && !check_coordinate_history(x-1, y, path)) { // Left
+        fringe.push({x-1, y});
+        discovered_children = true;
+    }
+    if (valid_square(x+1, y, grid) && !check_coordinate_history(x+1, y, path)) { // Right
+        fringe.push({x+1, y});
+        discovered_children = true;
+    }
+    if (valid_square(x, y-1, grid) && !check_coordinate_history(x, y-1, path)) { // Down
+        fringe.push({x, y-1});
+        discovered_children = true;
+    }
+    
+    // If we didn't add any children, go up a node (pop back of path history)
+    if (!discovered_children) {path.pop_back();}
+
+    // If fringe is empty after adding all valid children, return false
+    if(fringe.empty()) {return false;}
+
+    // Iterate on next value of the stack
+    return bfs(grid, fringe, path);
 }
 
 bool check_coordinate_history(int x, int y, std::vector<std::array<int, 2>> history) {
