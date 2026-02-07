@@ -77,6 +77,7 @@ bool valid_square(int x, int y, std::vector<std::string> g);
  * @return returns true if found tosearch in history, else returns false
  */
 bool check_coordinate_history(Coordinates* current, Coordinates* tosearch);
+int check_coordinate_depth(Coordinates* current);
 
 // Search strategies
 bool dfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit);
@@ -151,11 +152,7 @@ int main() {
 
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
-
-    dfs(grid, starting_stack, INFINITY);
-    // bfs(grid, starting_queue);
-    // idfs(grid, starting_stack, 1);
-
+    idfs(grid, starting_stack, 1);
 
     return 0;
 }
@@ -207,7 +204,7 @@ bool dfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int dep
             coordinates = coordinates->getParent();
         }
         for (int i = history.size()-1; i >= 0; --i) {        
-            std::cout << "(" << history[i]->getx() << ", " << history[y]->gety() << "), ";
+            std::cout << "(" << history[i]->getx() << ", " << history[i]->gety() << "), ";
         }
         std::cout << std::endl;
         return true;
@@ -216,22 +213,22 @@ bool dfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int dep
     // Check up, left, down, right, to see if they are valid and haven't been visited, then push to stack
 
     Coordinates* up = new Coordinates(x, y+1, coordinates);
-    if (valid_square(up->getx(), up->gety(), grid) && !check_coordinate_history(coordinates, up)) { // Up
+    if (valid_square(up->getx(), up->gety(), grid) && !check_coordinate_history(coordinates, up) && check_coordinate_depth(coordinates) < depth_limit) { // Up
         fringe.push(up);
         discovered_children = true;
     }
     Coordinates* left = new Coordinates(x-1, y, coordinates);
-    if (valid_square(left->getx(), left->gety(), grid) && !check_coordinate_history(coordinates, left)) { // Left
+    if (valid_square(left->getx(), left->gety(), grid) && !check_coordinate_history(coordinates, left) && check_coordinate_depth(coordinates) < depth_limit) { // Left
         fringe.push(left);
         discovered_children = true;
     }
     Coordinates* right = new Coordinates(x+1, y, coordinates);
-    if (valid_square(right->getx(), right->gety(), grid) && !check_coordinate_history(coordinates, right)) { // Right
+    if (valid_square(right->getx(), right->gety(), grid) && !check_coordinate_history(coordinates, right) && check_coordinate_depth(coordinates) < depth_limit) { // Right
         fringe.push(right);
         discovered_children = true;
     }
     Coordinates* down = new Coordinates(x, y-1, coordinates);
-    if (valid_square(down->getx(), down->gety(), grid) && !check_coordinate_history(coordinates, down)) { // Down
+    if (valid_square(down->getx(), down->gety(), grid) && !check_coordinate_history(coordinates, down) && check_coordinate_depth(coordinates) < depth_limit) { // Down
         fringe.push(down);
         discovered_children = true;
     }
@@ -246,12 +243,15 @@ bool dfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int dep
 // (c) An iterative deepening depth-first search from S to G, given that the order of the operators you will test is: up, left, right, then down. 
 // At what depth is the solution reached?  
 
-bool idfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit = 1) {
+bool idfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit) {
     std::stack<Coordinates*> starting_stack; // Stack used for DFS fringe
     starting_stack.push(fringe.top());
     std::vector<Coordinates> history; // Starting vector for each iteration of DFS
     if (depth_limit >= INFINITY) {return false;}
-    else if (dfs(grid, fringe, depth_limit)) {return true;}
+    else if (dfs(grid, fringe, depth_limit)) {
+        std::cout << "SOLUTION DEPTH: " << depth_limit << std::endl;
+        return true;
+    }
     else {return idfs(grid, starting_stack, depth_limit+1);}
 }
 
@@ -264,4 +264,9 @@ bool check_coordinate_history(Coordinates* current, Coordinates* tosearch) {
         else {return check_coordinate_history(current->getParent(), tosearch);}
     }
     return false;
+}
+
+int check_coordinate_depth(Coordinates* current) {
+    if (current->getParent() == nullptr) {return 0;}
+    else {return 1 + check_coordinate_depth(current->getParent());}
 }
