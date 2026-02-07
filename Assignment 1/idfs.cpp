@@ -80,7 +80,7 @@ bool check_coordinate_history(Coordinates* current, Coordinates* tosearch);
 
 // Search strategies
 bool dfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit);
-bool bfs(std::vector<std::string> grid, std::queue<Coordinates*> fringe);
+
 bool idfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit);
 
 
@@ -129,7 +129,7 @@ int main() {
         std::cin >> x >> y; 
         // Check for valid goal coordinates, then place goal square
         if (valid_square(x, y, grid)) {
-            grid[y].replace(x, 1, GOAL_SQUARE);
+            grid[y].replace(x, y, GOAL_SQUARE);
         } else {std::cout << "INVALID GOAL SQUARE\n";}
     }
     print_grid(grid);
@@ -243,55 +243,6 @@ bool dfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int dep
     return dfs(grid, fringe, depth_limit);
 }
 
-bool bfs(std::vector<std::string> grid, std::queue<Coordinates*> fringe) {
-    std::cout << "BFS" << std::endl;
-    bool discovered_children = false; // Did we find children for this node?
-
-    // Access and pop current coordinates
-    Coordinates* coordinates = fringe.front();
-    int x = coordinates->getx(); int y = coordinates->gety();
-    fringe.pop();
-
-    // If goal state, print solution path and return true
-    if (grid[y].substr(x, 1) == GOAL_SQUARE) {
-        while(coordinates != nullptr) {
-            std::cout << coordinates->getx() << " " << coordinates->gety() << " ";
-            coordinates = coordinates->getParent();
-        }
-        std::cout << std::endl;
-        return true;
-    }
-
-    // Check up, left, down, right, to see if they are valid and haven't been visited, then push to queue
-
-    Coordinates* up = new Coordinates(x, y+1, coordinates);
-    if (valid_square(x, y+1, grid) && !check_coordinate_history(coordinates, up)) { // Up
-        fringe.push(up);
-        discovered_children = true;
-    }
-    Coordinates* left = new Coordinates(x-1, y, coordinates);
-    if (valid_square(x-1, y, grid) && !check_coordinate_history(coordinates, left)) { // Left
-        fringe.push(left);
-        discovered_children = true;
-    }
-    Coordinates* right = new Coordinates(x+1, y, coordinates);
-    if (valid_square(x+1, y, grid) && !check_coordinate_history(coordinates, right)) { // Right
-        fringe.push(right);
-        discovered_children = true;
-    }
-    Coordinates* down = new Coordinates(x, y-1, coordinates);
-    if (valid_square(x, y-1, grid) && !check_coordinate_history(coordinates, down)) { // Down
-        fringe.push(down);
-        discovered_children = true;
-    }
-
-    // If fringe is empty after adding all valid children, return false
-    if(fringe.empty()) {return false;}
-
-    // Iterate on next value of the stack
-    return bfs(grid, fringe);
-}
-
 // (c) An iterative deepening depth-first search from S to G, given that the order of the operators you will test is: up, left, right, then down. 
 // At what depth is the solution reached?  
 
@@ -301,7 +252,7 @@ bool idfs(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int de
     std::vector<Coordinates> history; // Starting vector for each iteration of DFS
     if (depth_limit >= INFINITY) {return false;}
     else if (dfs(grid, fringe, depth_limit)) {return true;}
-    else {return idfs(grid, fringe, depth_limit+1);}
+    else {return idfs(grid, starting_stack, depth_limit+1);}
 }
 
 bool check_coordinate_history(Coordinates* current, Coordinates* tosearch) {
