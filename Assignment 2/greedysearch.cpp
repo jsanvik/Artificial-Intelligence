@@ -87,7 +87,7 @@ int check_coordinate_depth(Coordinates* current);
  * @param first first square on the grid
  * @param second second square on the grid
  */
-int manhattan_distance(Coordinates* first, Coordinates* second)
+int manhattan_distance(Coordinates* first, Coordinates* second);
 
 // Search strategies
 bool greedySearch(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit);
@@ -118,4 +118,133 @@ int main() {
     print_grid(grid);
     x = 0; y = 0; // Reset x and y to invalid coordinates
     
-    // Add starting squa
+    // Add starting square in grid
+    while (!valid_square(x, y, grid)) {
+        std::cout << "\n Enter starting coordinates in the following form: x y ";
+        std::cin >> x >> y; 
+        // Check for valid starting square coordinates, then place starting square
+        if (valid_square(x, y, grid)) {
+            grid[y].replace(x, 1, STARTING_SQUARE);
+            Coordinates* start = new Coordinates(x, y);
+            starting_stack.push(start);
+            starting_queue.push(start);
+        } else {std::cout << "INVALID STARTING SQUARE\n";}
+    }
+    print_grid(grid);
+    x = 0; y = 0; // Reset x and y to invalid coordinates
+
+    while (!valid_square(x, y, grid)) {
+        std::cout << "\n Enter goal coordinates in the following form: x y ";
+        std::cin >> x >> y; 
+        // Check for valid goal coordinates, then place goal square
+        if (valid_square(x, y, grid)) {
+            grid[y].replace(x, 1, GOAL_SQUARE);
+        } else {std::cout << "INVALID GOAL SQUARE\n";}
+    }
+    print_grid(grid);
+    x = 0; y = 0; // Reset x and y to invalid coordinates
+    
+    // Enter forbidden squares
+    while (entering_forbidden_squares) {
+        std::cout << "\n To place a forbidden square, enter coordinates in the following form: x y \n or enter -1 -1 to place no more forbidden squares \n";
+        std::cin >> x >> y;
+        if (x !=-1 && y!=-1) {
+            if (valid_square(x, y, grid)) {
+                grid[y].replace(x, 1, FORBIDDEN_SQUARE);
+                print_grid(grid);
+            } else {
+                std::cout << "INVALID SQUARE" << std::endl;
+            }
+        } else {entering_forbidden_squares = false;}
+    }
+
+    x = 0; y = 0; // Reset x and y to invalid coordinates
+
+    greedySearch(grid, starting_stack, 1);
+
+    return 0;
+}
+
+
+bool valid_square(int x, int y, std::vector<std::string> g) {
+    return (x > 0 && y > 0 && y < g.size() && x < g.at(0).length() && g[y].substr(x, 1) != FORBIDDEN_SQUARE);
+}
+
+
+void print_grid(std::vector<std::string> g) {
+    std::cout << std::endl;
+    for (std::string s : g) {std::cout << s << std::endl;}
+}
+
+bool greedySearch(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit = INFINITY) {
+    bool discovered_children = false; // Did we find children for this node?
+
+    // Access and pop current coordinates
+    Coordinates* coordinates = fringe.top();
+    int x = coordinates->getx(); int y = coordinates->gety();
+    fringe.pop();
+
+    // If goal state, print solution path and return true
+    if (grid[y].substr(x, 1) == GOAL_SQUARE) {
+        // Store history in vector backwards, then print forwards
+        std::vector<Coordinates*> history;
+        while(coordinates != nullptr) {
+            history.push_back(coordinates);
+            coordinates = coordinates->getParent();
+        }
+        for (int i = history.size()-1; i >= 0; --i) {        
+            std::cout << "(" << history[i]->getx() << ", " << history[i]->gety() << "), ";
+        }
+        std::cout << std::endl;
+        return true;
+    }
+
+    // Check up, left, down, right, to see if they are valid and haven't been visited, then push to stack
+
+    Coordinates* up = new Coordinates(x, y+1, coordinates);
+    if (valid_square(up->getx(), up->gety(), grid) && !check_coordinate_history(coordinates, up) && check_coordinate_depth(coordinates) < depth_limit) { // Up
+        fringe.push(up);
+        discovered_children = true;
+    }
+    Coordinates* left = new Coordinates(x-1, y, coordinates);
+    if (valid_square(left->getx(), left->gety(), grid) && !check_coordinate_history(coordinates, left) && check_coordinate_depth(coordinates) < depth_limit) { // Left
+        fringe.push(left);
+        discovered_children = true;
+    }
+    Coordinates* right = new Coordinates(x+1, y, coordinates);
+    if (valid_square(right->getx(), right->gety(), grid) && !check_coordinate_history(coordinates, right) && check_coordinate_depth(coordinates) < depth_limit) { // Right
+        fringe.push(right);
+        discovered_children = true;
+    }
+    Coordinates* down = new Coordinates(x, y-1, coordinates);
+    if (valid_square(down->getx(), down->gety(), grid) && !check_coordinate_history(coordinates, down) && check_coordinate_depth(coordinates) < depth_limit) { // Down
+        fringe.push(down);
+        discovered_children = true;
+    }
+
+    // If fringe is empty after adding all valid children, return false
+    if(fringe.empty()) {return false;}
+
+    // Iterate on next value of the stack
+    return greedySearch(grid, fringe, depth_limit);
+}
+
+bool check_coordinate_history(Coordinates* current, Coordinates* tosearch) {
+    while(current->getParent() != nullptr) {
+        if (current->getParent()->getx() == tosearch->getx() && current->getParent()->gety() == tosearch->gety()) {
+            // std::cout << "FOUND IN HISTORY" << std::endl;
+            return true;
+        }
+        else {return check_coordinate_history(current->getParent(), tosearch);}
+    }
+    return false;
+}
+
+int check_coordinate_depth(Coordinates* current) {
+    if (current->getParent() == nullptr) {return 0;}
+    else {return 1 + check_coordinate_depth(current->getParent());}
+}
+
+int manhattan_distance(Coordinates* first, Coordinates* second) {
+
+}
