@@ -116,7 +116,7 @@ int main() {
         std::cin >> x >> y; 
         // Check for valid starting square coordinates, then place starting square
         if (valid_square(x, y, grid)) {
-            grid[y].replace(x, y, STARTING_SQUARE);
+            grid[y].replace(x, 1, STARTING_SQUARE);
             Coordinates* start = new Coordinates(x, y);
             starting_stack.push(start);
             starting_queue.push(start);
@@ -130,7 +130,7 @@ int main() {
         std::cin >> x >> y; 
         // Check for valid goal coordinates, then place goal square
         if (valid_square(x, y, grid)) {
-            grid[y].replace(x, y, GOAL_SQUARE);
+            grid[y].replace(x, 1, GOAL_SQUARE);
         } else {std::cout << "INVALID GOAL SQUARE\n";}
     }
     print_grid(grid);
