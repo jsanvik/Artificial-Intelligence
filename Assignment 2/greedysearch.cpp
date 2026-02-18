@@ -24,36 +24,57 @@ reached?  */
 #include <array>
 #include <limits>
 
-// CHaracters to represent grid squares
+// Characters to represent grid squares
 bool entering_forbidden_squares = true;
 const std::string EMPTY_SQUARE = "-";
 const std::string STARTING_SQUARE = "S";
 const std::string GOAL_SQUARE = "G";
 const std::string FORBIDDEN_SQUARE = "X";
-const unsigned int INFINITY = std::numeric_limits<int>::max(); // Used for DFS with no depth limit
+const unsigned int INFINITY = std::numeric_limits<int>::max(); // Used for search with no depth limit
 
 class Coordinates {
   private:
     int x;
     int y;
     Coordinates* parent;
+    Coordinates* goal;
   public:
     // Constructors
     Coordinates(int xcoord, int ycoord) {
         x = xcoord;
         y = ycoord;
         parent = nullptr;
+        goal = nullptr;
     }
-    Coordinates(int xcoord, int ycoord, Coordinates* p) {
+    Coordinates(int xcoord, int ycoord, Coordinates* p, Coordinates* g) {
         x = xcoord;
         y = ycoord;
         parent = p;
+        goal = g;
     }
     int getx() {return x;}
     int gety() {return y;}
     void setParent(Coordinates* p) {parent = p;}
     Coordinates* getParent() {return parent;}
+    void setGoal(Coordinates* g) {goal = g;}
+    Coordinates* getGoal() {return goal;}
+    friend bool operator>(Coordinates a, Coordinates b);
+    friend bool operator<(Coordinates a, Coordinates b);
+    friend bool operator==(Coordinates a, Coordinates b);
 };
+
+/**
+ * @brief defining comparison operators for coordinates to give highest priority to those closest to the goal
+ */
+bool operator>(Coordinates a, Coordinates b) {
+    return(manhattan_distance(&a, goal) > manhattan_distance(&b, goal))
+}
+bool operator<(Coordinates a, Coordinates b) {
+    return(manhattan_distance(&a, goal) < manhattan_distance(&b, goal))
+}
+bool operator==(Coordinates a, Coordinates b) {
+    return(manhattan_distance(&a, goal) == manhattan_distance(&b, goal))
+}
 
 // Helper functions
 
@@ -89,15 +110,21 @@ int check_coordinate_depth(Coordinates* current);
  */
 int manhattan_distance(Coordinates* first, Coordinates* second);
 
-// Search strategies
-bool greedySearch(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit);
+
+
+/**
+ * @brief searches by exploring nodes with smallest value of heuristic (Manhattan Distance) first
+ * @param grid
+ * @param fringe
+ * @param depth_limit
+ */
+bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal, int depth_limit);
 
 
 int main() {
     int x, y;
     std::vector<std::string> grid = {};
-    std::stack<Coordinates*> starting_stack; // Stack used for DFS fringe
-    std::priority_queue<Coordinates*> starting_queue; // Stack used for DFS fringe
+    std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> starting_queue; // Priority queue for search fringe
     std::vector<Coordinates*> history; // Vector used to store current path
     
     // prompt the user to enter the width and the height of the grid, the start and the goal states, and the forbidden squares.
@@ -126,7 +153,6 @@ int main() {
         if (valid_square(x, y, grid)) {
             grid[y].replace(x, 1, STARTING_SQUARE);
             Coordinates* start = new Coordinates(x, y);
-            starting_stack.push(start);
             starting_queue.push(start);
         } else {std::cout << "INVALID STARTING SQUARE\n";}
     }
@@ -138,7 +164,9 @@ int main() {
         std::cin >> x >> y; 
         // Check for valid goal coordinates, then place goal square
         if (valid_square(x, y, grid)) {
+            Coordinates* goal = new Coordinates(x, y)
             grid[y].replace(x, 1, GOAL_SQUARE);
+            start->setGoal(goal);
         } else {std::cout << "INVALID GOAL SQUARE\n";}
     }
     print_grid(grid);
@@ -160,7 +188,7 @@ int main() {
 
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
-    greedySearch(grid, starting_stack, 1);
+    greedySearch(grid, starting_queue, goal, INFINITY);
 
     return 0;
 }
@@ -176,7 +204,7 @@ void print_grid(std::vector<std::string> g) {
     for (std::string s : g) {std::cout << s << std::endl;}
 }
 
-bool greedySearch(std::vector<std::string> grid, std::stack<Coordinates*> fringe, int depth_limit = INFINITY) {
+bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal, int depth_limit = INFINITY) {
     bool discovered_children = false; // Did we find children for this node?
 
     // Access and pop current coordinates
@@ -185,7 +213,8 @@ bool greedySearch(std::vector<std::string> grid, std::stack<Coordinates*> fringe
     fringe.pop();
 
     // If goal state, print solution path and return true
-    if (grid[y].substr(x, 1) == GOAL_SQUARE) {
+    if (manhattan_distance(coordinates, goal) == 0) {
+        // TODO: Figure out how to correctly print history
         // Store history in vector backwards, then print forwards
         std::vector<Coordinates*> history;
         while(coordinates != nullptr) {
@@ -200,23 +229,22 @@ bool greedySearch(std::vector<std::string> grid, std::stack<Coordinates*> fringe
     }
 
     // Check up, left, down, right, to see if they are valid and haven't been visited, then push to stack
-
-    Coordinates* up = new Coordinates(x, y+1, coordinates);
+    Coordinates* up = new Coordinates(x, y+1, coordinates, goal);
     if (valid_square(up->getx(), up->gety(), grid) && !check_coordinate_history(coordinates, up) && check_coordinate_depth(coordinates) < depth_limit) { // Up
         fringe.push(up);
         discovered_children = true;
     }
-    Coordinates* left = new Coordinates(x-1, y, coordinates);
+    Coordinates* left = new Coordinates(x-1, y, coordinates, goal);
     if (valid_square(left->getx(), left->gety(), grid) && !check_coordinate_history(coordinates, left) && check_coordinate_depth(coordinates) < depth_limit) { // Left
         fringe.push(left);
         discovered_children = true;
     }
-    Coordinates* right = new Coordinates(x+1, y, coordinates);
+    Coordinates* right = new Coordinates(x+1, y, coordinates, goal);
     if (valid_square(right->getx(), right->gety(), grid) && !check_coordinate_history(coordinates, right) && check_coordinate_depth(coordinates) < depth_limit) { // Right
         fringe.push(right);
         discovered_children = true;
     }
-    Coordinates* down = new Coordinates(x, y-1, coordinates);
+    Coordinates* down = new Coordinates(x, y-1, coordinates, goal);
     if (valid_square(down->getx(), down->gety(), grid) && !check_coordinate_history(coordinates, down) && check_coordinate_depth(coordinates) < depth_limit) { // Down
         fringe.push(down);
         discovered_children = true;
