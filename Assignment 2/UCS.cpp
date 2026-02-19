@@ -5,7 +5,7 @@
 /* You are given a grid similar to the one above. You may prompt the user to enter the width and the height of the grid, the start and the goal states, and the forbidden squares.  
 Manhattan distance should be used as the heuristic function, and ties are solved using up, left, right, and down.  
 Implement each of the following searches and show the solutions:  
-**(b) A∗ search from S to G.**    */
+**(c) UCS search from S to G.**  */
 
 #include <iostream>
 #include <algorithm>
@@ -59,17 +59,6 @@ class Coordinates {
         if (parent == nullptr) {return 0;}
         else {return 1 + parent->getDepth();}
     }
-    // h*(n) (Estimated forwards cost, using Manhattan Distance as heuristic)
-    /**
-     * @brief returns manhattan distance between a pair of coordinates on the grid
-     * @param first first square on the grid
-     * @param second second square on the grid
-     */
-    static int manhattan_distance(Coordinates* first, Coordinates* second) {
-        return (std::abs(first->getx() - second->getx()) + std::abs(first->gety() - second->gety()));
-    }
-    // f(n) (forwards + backwards cost)
-    int priority() {return this->getDepth() + manhattan_distance(this, goal);}
     friend bool operator>(Coordinates a, Coordinates b);
     friend bool operator<(Coordinates a, Coordinates b);
     friend bool operator==(Coordinates a, Coordinates b);
@@ -109,27 +98,27 @@ int check_coordinate_depth(Coordinates* current);
  * @brief defining comparison operators for coordinates to give highest priority to those closest to the goal that was just defined
  */
 bool operator!=(Coordinates a, Coordinates b) {
-    return(a.priority() != b.priority());
+    return(a.getDepth() != b.getDepth());
 }
 bool operator==(Coordinates a, Coordinates b) {
-    return(a.priority() == b.priority());
+    return(a.getDepth() == b.getDepth());
 }
  bool operator>(Coordinates a, Coordinates b) {
-    if (a.priority() == b.priority()) {return a.getDirection() < b.getDirection();} // To break ties
-    return(a.priority() > b.priority());
+    if (a.getDepth() == b.getDepth()) {return a.getDirection() < b.getDirection();} // To break ties
+    return(a.getDepth() > b.getDepth());
 }
 bool operator<(Coordinates a, Coordinates b) {
-    if (a.priority() == b.priority()) {return a.getDirection() > b.getDirection();} // To break ties
-    return(a.priority() < b.priority());
+    if (a.getDepth() == b.getDepth()) {return a.getDirection() > b.getDirection();} // To break ties
+    return(a.getDepth() < b.getDepth());
 }
 
 
 /**
- * @brief searches by exploring nodes with smallest value (backwards cost + estimated forwards cost)
+ * @brief searches by exploring nodes with smallest value of backwards cost first
  * @param grid
  * @param fringe
  */
-bool astarsearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal);
+bool ucssearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal);
 
 
 int main() {
@@ -201,7 +190,7 @@ int main() {
 
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
-    if(!astarsearch(grid, starting_queue, start->getGoal())) {std::cout << "NO VALID SOLUTION\n";}
+    if(!ucssearch(grid, starting_queue, start->getGoal())) {std::cout << "NO VALID SOLUTION\n";}
 
     return 0;
 }
@@ -217,7 +206,7 @@ void print_grid(std::vector<std::string> g) {
     for (std::string s : g) {std::cout << s << std::endl;}
 }
 
-bool astarsearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal) {
+bool ucssearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal) {
     bool discovered_children = false; // Did we find children for this node?
 
     // Access and pop current coordinates
@@ -267,7 +256,7 @@ bool astarsearch(std::vector<std::string> grid, std::priority_queue<Coordinates*
     if(fringe.empty()) {return false;}
 
     // Iterate on next value of the stack
-    return astarsearch(grid, fringe, goal);
+    return ucssearch(grid, fringe, goal);
 }
 
 bool check_coordinate_history(Coordinates* current, Coordinates* tosearch) {
