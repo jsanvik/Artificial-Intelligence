@@ -5,7 +5,7 @@
 /* You are given a grid similar to the one above. You may prompt the user to enter the width and the height of the grid, the start and the goal states, and the forbidden squares.  
 Manhattan distance should be used as the heuristic function, and ties are solved using up, left, right, and down.  
 Implement each of the following searches and show the solutions:  
-**(a) Greedy search from S to G.**  */
+**(b) A∗ search from S to G.**    */
 
 #include <iostream>
 #include <algorithm>
@@ -30,6 +30,7 @@ class Coordinates {
     int y;
     Coordinates* parent;
     Coordinates* goal;
+    int direction; // What direction did you go to get to this square? 1 = up, 2 = left, 3 = right, 4 = down. Used for breaking ties
   public:
     // Constructors
     Coordinates(int xcoord, int ycoord) {
@@ -38,11 +39,12 @@ class Coordinates {
         parent = nullptr;
         goal = nullptr;
     }
-    Coordinates(int xcoord, int ycoord, Coordinates* p, Coordinates* g) {
+    Coordinates(int xcoord, int ycoord, Coordinates* p, Coordinates* g, int d) {
         x = xcoord;
         y = ycoord;
         parent = p;
         goal = g;
+        direction = d;
     }
     int getx() {return x;}
     int gety() {return y;}
@@ -50,13 +52,28 @@ class Coordinates {
     Coordinates* getParent() {return parent;}
     void setGoal(Coordinates* g) {goal = g;}
     Coordinates* getGoal() {return goal;}
+    int getDirection() {return direction;}
+    // g(n) (Backwards cost)
+    int getDepth() {
+        // std::cout << "DEPTH" << std::endl;
+        if (parent == nullptr) {return 0;}
+        else {return 1 + parent->getDepth();}
+    }
+    // h*(n) (Estimated forwards cost, using Manhattan Distance as heuristic)
+    /**
+     * @brief returns manhattan distance between a pair of coordinates on the grid
+     * @param first first square on the grid
+     * @param second second square on the grid
+     */
     static int manhattan_distance(Coordinates* first, Coordinates* second) {
         return (std::abs(first->getx() - second->getx()) + std::abs(first->gety() - second->gety()));
     }
-    int manhattanToGoal() {return manhattan_distance(this, goal);}
+    // f(n) (forwards + backwards cost)
+    int priority() {return this->getDepth() + manhattan_distance(this, goal);}
     friend bool operator>(Coordinates a, Coordinates b);
     friend bool operator<(Coordinates a, Coordinates b);
     friend bool operator==(Coordinates a, Coordinates b);
+    friend bool operator!=(Coordinates a, Coordinates b);
 };
 
 // Helper functions
@@ -86,31 +103,33 @@ bool check_coordinate_history(Coordinates* current, Coordinates* tosearch);
  * @param current current state node
  */
 int check_coordinate_depth(Coordinates* current);
-/**
- * @brief returns manhattan distance between a pair of coordinates on the grid
- * @param first first square on the grid
- * @param second second square on the grid
- */
+
 
 /**
  * @brief defining comparison operators for coordinates to give highest priority to those closest to the goal that was just defined
  */
-bool operator>(Coordinates a, Coordinates b) {
-    return(a.manhattanToGoal() > b.manhattanToGoal());
-}
-bool operator<(Coordinates a, Coordinates b) {
-    return(a.manhattanToGoal() < b.manhattanToGoal());
+bool operator!=(Coordinates a, Coordinates b) {
+    return(a.priority() != b.priority());
 }
 bool operator==(Coordinates a, Coordinates b) {
-    return(a.manhattanToGoal() == b.manhattanToGoal());
+    return(a.priority() == b.priority());
 }
+ bool operator>(Coordinates a, Coordinates b) {
+    if (a.priority() == b.priority()) {return a.getDirection() < b.getDirection();} // To break ties
+    return(a.priority() > b.priority());
+}
+bool operator<(Coordinates a, Coordinates b) {
+    if (a.priority() == b.priority()) {return a.getDirection() > b.getDirection();} // To break ties
+    return(a.priority() < b.priority());
+}
+
 
 /**
  * @brief searches by exploring nodes with smallest value of heuristic (Manhattan Distance) first
  * @param grid
  * @param fringe
  */
-bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal);
+bool astarsearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal);
 
 
 int main() {
@@ -153,7 +172,7 @@ int main() {
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
     // Add goal square to grid
-    while (!valid_square(x, y, grid)) {
+    while (!valid_square(x, y, grid) || grid[y].substr(x, 1) == STARTING_SQUARE) {
         std::cout << "\n Enter goal coordinates in the following form: x y ";
         std::cin >> x >> y; 
         // Check for valid goal coordinates, then place goal square
@@ -182,7 +201,7 @@ int main() {
 
     x = 0; y = 0; // Reset x and y to invalid coordinates
 
-    greedySearch(grid, starting_queue, start->getGoal());
+    if(!astarsearch(grid, starting_queue, start->getGoal())) {std::cout << "NO VALID SOLUTION\n";}
 
     return 0;
 }
@@ -198,16 +217,16 @@ void print_grid(std::vector<std::string> g) {
     for (std::string s : g) {std::cout << s << std::endl;}
 }
 
-bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal) {
+bool astarsearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal) {
     bool discovered_children = false; // Did we find children for this node?
 
     // Access and pop current coordinates
     Coordinates* coordinates = fringe.top();
+    // std::cout << coordinates->priority() << std::endl;
     int x = coordinates->getx(); int y = coordinates->gety();
     fringe.pop();
-
     // If goal state, print solution path and return true
-    if (Coordinates::manhattan_distance(coordinates, goal) == 0) {
+    if (grid[y].substr(x, 1) == GOAL_SQUARE) {
         // TODO: Figure out how to correctly print history
         // Store history in vector backwards, then print forwards
         std::vector<Coordinates*> history;
@@ -223,22 +242,22 @@ bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates
     }
 
     // Check up, left, down, right, to see if they are valid and haven't been visited, then push to stack
-    Coordinates* up = new Coordinates(x, y+1, coordinates, goal);
+    Coordinates* up = new Coordinates(x, y+1, coordinates, goal, 1);
     if (valid_square(up->getx(), up->gety(), grid) && !check_coordinate_history(coordinates, up)) { // Up
         fringe.push(up);
         discovered_children = true;
     }
-    Coordinates* left = new Coordinates(x-1, y, coordinates, goal);
+    Coordinates* left = new Coordinates(x-1, y, coordinates, goal, 2);
     if (valid_square(left->getx(), left->gety(), grid) && !check_coordinate_history(coordinates, left)) { // Left
         fringe.push(left);
         discovered_children = true;
     }
-    Coordinates* right = new Coordinates(x+1, y, coordinates, goal);
+    Coordinates* right = new Coordinates(x+1, y, coordinates, goal, 3);
     if (valid_square(right->getx(), right->gety(), grid) && !check_coordinate_history(coordinates, right)) { // Right
         fringe.push(right);
         discovered_children = true;
     }
-    Coordinates* down = new Coordinates(x, y-1, coordinates, goal);
+    Coordinates* down = new Coordinates(x, y-1, coordinates, goal, 4);
     if (valid_square(down->getx(), down->gety(), grid) && !check_coordinate_history(coordinates, down)) { // Down
         fringe.push(down);
         discovered_children = true;
@@ -248,7 +267,7 @@ bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates
     if(fringe.empty()) {return false;}
 
     // Iterate on next value of the stack
-    return greedySearch(grid, fringe, goal);
+    return astarsearch(grid, fringe, goal);
 }
 
 bool check_coordinate_history(Coordinates* current, Coordinates* tosearch) {
