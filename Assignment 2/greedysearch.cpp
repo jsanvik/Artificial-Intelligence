@@ -195,7 +195,7 @@ bool valid_square(int x, int y, std::vector<std::string> g) {
 
 void print_grid(std::vector<std::string> g) {
     std::cout << std::endl;
-    for (std::string s : g) {std::cout << s << std::endl;}
+    for (int i = g.size()-1; i >= 0; --i) {std::cout << g[i] << std::endl;}
 }
 
 bool greedySearch(std::vector<std::string> grid, std::priority_queue<Coordinates*, std::vector<Coordinates*>, std::greater<Coordinates*>> fringe, Coordinates* goal) {
