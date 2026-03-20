@@ -59,17 +59,11 @@ class Board {
     int moveQueen(int x, int y) {
         if (x > size || y > size) {std::cout << "TOO BIG";}
         // Find current y coordinate of queen in column x
-        int oldy;
-        for (int i = 0; i < size; ++i) {
-            std::cout << i << std::endl;
-            if (squares[i][x]->isQueen()) {
-                oldy = i;
-                break;
-            }   
-        }
+        int oldy = queens[x][1];
         std::cout << "OLDY " << oldy << std::endl;
         squares[oldy][x]->removeQueen();
         squares[y][x]->placeQueen();
+        queens[x] = {x, y};
         return oldy;
     }
 
@@ -94,6 +88,46 @@ class Board {
         if (columnqueens > 1) {columnattacks+=(columnqueens-1);} // Count one attack in a column per pair of queens
         return columnattacks;
     }
+    // int diagonalattacks(int x, int y) {
+    //     int diagonalqueens = 0;
+    //     int diagonalattacks = 0;
+    //     // Check down and right
+    //     int i = x;
+    //     int j = y;
+    //     while(i < size && j < size) {
+    //         if (squares[j][i]->isQueen()) {diagonalqueens++;}
+    //         i++; j++;
+    //     }
+    //     // Check down and left
+    //     i = x-1;
+    //     j = y+1;
+    //     while(i >= 0 && j < size) {
+    //         if (squares[j][i]->isQueen()) {diagonalqueens++;}
+    //         i--; j++;
+    //     }
+    //     // Check up and left
+    //     i = x-1;
+    //     j = y-1;
+    //     while(i >= 0 && j >= 0) {
+    //         if (squares[j][i]->isQueen()) {diagonalqueens++;}
+    //         i--; j--;
+    //     }
+    //     // Check down and left
+    //     i = x+1;
+    //     j = y-1;
+    //     while(i < size && j >= 0) {
+    //         if (squares[j][i]->isQueen()) {diagonalqueens++;}
+    //         i++; j--;
+    //     }
+    //     if (diagonalqueens > 1) {diagonalattacks+=(diagonalqueens-1);}
+    //     return diagonalattacks;
+    // }
+
+    int diagonalattacks(int queen1, int queen2) {
+        int diagonalattacks = 0;
+        if (abs(queens[queen1][0] - queens[queen2][0]) == abs(queens[queen1][1] - queens[queen2][1])) {diagonalattacks++;}
+        return diagonalattacks;
+    }
 
     // count attacks for entire board
     int count_attacks() {
@@ -104,13 +138,19 @@ class Board {
             r += rowattacks(i, i);
             c += columnattacks(i, i);
         }
+        for (int i = 0; i < queens.size(); ++i) {
+            for (int j = 1; j < queens.size(); ++j) {
+                if (i == j) {continue;}
+                d += diagonalattacks(i, j);
+            }
+        }
         return r + c + d;
     }
     // count attacks for single square
     int count_attacks(int x, int y) {
         int r = rowattacks(x, y);
         int c = columnattacks(x, y);
-        int d = 0; // TODO: add diagonal checking
+        int d = diagonalattacks(x, y);
         return r + c + d;
     }
     
@@ -144,15 +184,11 @@ int main() {
 
     while(board.count_attacks() > 0) {
         int attacks = board.count_attacks();
-        std::cout << "NUMBER OF ATTACKS: " << attacks << std::endl;
         // RANDOMLY PICK A QUEEN THAT HAS CONFLICTS
         int queen = rand() % n;
-        std::cout << "MOVING QUEEN: " << queen << std::endl;
         // RANDOMLY MOVE IT TO A SQUARE
         int square = rand() % n;
-        std::cout << "SQUARE: " << square << std::endl;
         int oldsquare = board.moveQueen(queen, square);
-        // if (attacks == 0) {break;} // End if solution found
         // // If the new position is worse, move the queen back
         // if (attacks >= board.count_attacks()) {board.moveQueen(queen, oldsquare);}
     }
