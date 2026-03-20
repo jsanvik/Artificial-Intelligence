@@ -175,9 +175,9 @@ int main() {
     srand(time(0));
     int n;
     n = 8;
-    // std::cout << "ENTER BOARD SIZE: ";
-    // std::cin >> n;
-    // std::cout << std::endl; 
+    std::cout << "ENTER BOARD SIZE: ";
+    std::cin >> n;
+    std::cout << std::endl; 
 
     Board board(n);
     board.print();
